@@ -1,4 +1,4 @@
-package promise
+package js
 
 import (
 	"errors"
@@ -7,7 +7,7 @@ import (
 	"rogchap.com/v8go"
 )
 
-func Await(promise *v8go.Value) (*v8go.Value, error) {
+func Await(promise *Value) (*Value, error) {
 	p, err := promise.AsPromise()
 	if err != nil {
 		return nil, err
@@ -15,10 +15,10 @@ func Await(promise *v8go.Value) (*v8go.Value, error) {
 	if p.State() == v8go.Pending {
 		wg := sync.WaitGroup{}
 		wg.Add(1)
-		p.Then(func(info *v8go.FunctionCallbackInfo) *v8go.Value {
+		p.Then(func(info *v8go.FunctionCallbackInfo) *Value {
 			wg.Done()
 			return nil
-		}, func(info *v8go.FunctionCallbackInfo) *v8go.Value {
+		}, func(info *v8go.FunctionCallbackInfo) *Value {
 			wg.Done()
 			return nil
 		})

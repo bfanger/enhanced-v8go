@@ -1,4 +1,4 @@
-package node
+package js
 
 import (
 	"embed"
@@ -8,7 +8,7 @@ import (
 	"rogchap.com/v8go"
 )
 
-//go:embed js/*.js
+//go:embed scripts/*.js
 var js embed.FS
 
 type Polyfill struct {
@@ -44,7 +44,7 @@ func NewPolyfill(iso *v8go.Isolate) (*Polyfill, error) {
 	global.Set("console2", console)
 	global.Set("console", console)
 
-	err = lazyGlobalFunction(iso, global, "require", "js/require.js")
+	err = lazyGlobalFunction(iso, global, "require", "scripts/require.js")
 	if err != nil {
 		return nil, err
 	}

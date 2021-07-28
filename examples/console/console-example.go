@@ -4,8 +4,7 @@ import (
 	_ "embed"
 	"fmt"
 
-	"github.com/bfanger/v8go-node-polyfills/node"
-	"rogchap.com/v8go"
+	"github.com/bfanger/enhanced-v8go/js"
 )
 
 //go:embed console-example.js
@@ -13,13 +12,8 @@ var source string
 
 func main() {
 	fmt.Println("> console-example")
-	iso, err := v8go.NewIsolate()
-	panicIfError(err)
 
-	polyfill, err := node.NewPolyfill(iso)
-	panicIfError(err)
-
-	ctx, _ := v8go.NewContext(iso, polyfill.GlobalTemplate)
+	ctx, _ := js.NewContext()
 
 	if source == "" {
 		panic("source was empty")

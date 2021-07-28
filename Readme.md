@@ -1,24 +1,45 @@
-# Node Polyfills for [V8Go](https://github.com/rogchap/v8go)
+# Enhanced [V8Go](https://github.com/rogchap/v8go)
+
+Build on top of https://github.com/rogchap/v8go and improves the developer experience:
+
+## Features
+
+- Modules system
+- shorter "js" package alias
+- (wip) Typescript support (via esbuild)
+- (wip) console.log
 
 ## Install
 
 ```shell
-go get -u github.com/bfanger/v8go-node-polyfills
+go get -u github.com/bfanger/enhanced-v8go
 ```
 
 > This module uses Golang [embed](https://golang.org/pkg/embed/), so requires Go version 1.16
 
-## Polyfill List
+## Polyfills
 
-None yet
+- (wip) console
 
 ## Usage
 
 ```go
-    iso, _ := v8go.NewIsolate()
-	polyfill, _ := node.NewPolyfill(iso)
-	ctx, _ := v8go.NewContext(iso, polyfill.GlobalTemplate)
-    ctx.RunScript("print('hello');", "go")
+package main
+
+import (
+	"fmt"
+
+	"github.com/bfanger/enhanced-v8go/js"
+)
+
+func main() {
+	ctx, err := js.NewContext()
+	if err != nil {
+		panic(err)
+	}
+	result := ctx.MustEval("1 + 1")
+	fmt.Println(result)
+}
 ```
 
 ## Approach

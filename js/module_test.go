@@ -1,11 +1,10 @@
-package module
+package js
 
 import (
 	"testing"
 
 	"github.com/evanw/esbuild/pkg/api"
 	"github.com/stretchr/testify/assert"
-	"rogchap.com/v8go"
 )
 
 func TestTransformCJS(t *testing.T) {
@@ -15,7 +14,7 @@ func TestTransformCJS(t *testing.T) {
 		return
 	}
 	assert.Equal("(async function () { var exports = {}; var module = { exports };\nmodule.exports = 123;\n\nreturn module.exports; })()", code)
-	ctx, err := v8go.NewContext()
+	ctx, err := NewContext()
 	if assert.NoError(err) == false {
 		return
 	}
@@ -36,7 +35,7 @@ func TestTransformESM(t *testing.T) {
 	if assert.NoError(err) == false {
 		return
 	}
-	ctx, err := v8go.NewContext()
+	ctx, err := NewContext()
 	if assert.NoError(err) == false {
 		return
 	}
@@ -58,7 +57,7 @@ func TestTransformInvalidJavascript(t *testing.T) {
 
 func TestRequire(t *testing.T) {
 	assert := assert.New(t)
-	ctx, err := v8go.NewContext()
+	ctx, err := NewContext()
 	if assert.NoError(err) == false {
 		return
 	}

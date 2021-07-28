@@ -1,21 +1,19 @@
-package module
+package js
 
 import (
 	"fmt"
 	"os"
 	"strings"
 
-	"github.com/bfanger/v8go-node-polyfills/module/promise"
 	"github.com/evanw/esbuild/pkg/api"
 	"github.com/pkg/errors"
-	"rogchap.com/v8go"
 )
 
 type Module struct {
-	*v8go.Value
+	*Value
 }
 
-func (m *Module) Default() (*v8go.Value, error) {
+func (m *Module) Default() (*Value, error) {
 	exports, err := m.AsObject()
 	if err != nil {
 		return m.Value, nil // CommonJS
@@ -35,9 +33,9 @@ type registeryEntry struct {
 }
 
 // @todo cleanup disposed contexts
-var registery = make(map[*v8go.Context]map[string]*registeryEntry)
+var registery = make(map[*Context]map[string]*registeryEntry)
 
-func Require(ctx *v8go.Context, filepath string) (*Module, error) {
+func Require(ctx *Context, filepath string) (*Module, error) {
 
 	entry := registery[ctx][filepath]
 	if entry != nil {
@@ -70,6 +68,7 @@ func Require(ctx *v8go.Context, filepath string) (*Module, error) {
 func Transform(code string, options api.TransformOptions) (string, error) {
 	options.Format = api.FormatCommonJS
 	options.Target = api.ESNext
+	// @todo Don't use esbuild when options.Sourcefile is a *.cjs file?
 
 	result := api.Transform(code, options)
 	if len(result.Errors) != 0 {
@@ -80,12 +79,12 @@ func Transform(code string, options api.TransformOptions) (string, error) {
 	return fmt.Sprintf("(async function () { var exports = {}; var module = { exports };\n%s\nreturn module.exports; })()", result.Code), nil
 }
 
-func newModule(ctx *v8go.Context, code, filename string) (*Module, error) {
+func newModule(ctx *Context, code, filename string) (*Module, error) {
 	m, err := ctx.RunScript(code, filename)
 	if err != nil {
 		return nil, err
 	}
-	exports, err := promise.Await(m)
+	exports, err := Await(m)
 	if err != nil {
 		return nil, err
 	}

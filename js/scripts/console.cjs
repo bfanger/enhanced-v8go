@@ -1,6 +1,6 @@
 function log(...args) {
   // @todo format arguments
-  println(...args);
+  go.println(...args);
 }
 
 export default new Proxy(
@@ -10,7 +10,6 @@ export default new Proxy(
       if (target[prop]) {
         return target[prop];
       }
-
       throw new Error("console." + prop + " is not implemented");
     },
   }

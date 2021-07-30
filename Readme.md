@@ -4,10 +4,11 @@ Build on top of https://github.com/rogchap/v8go and improves the developer exper
 
 ## Features
 
-- Modules system
+- Module system
 - shorter "js" package alias
-- (wip) Typescript support (via esbuild)
-- (wip) console.log
+- Typescript support (via esbuild)
+- console.log (wip)
+- require() (wip)
 
 ## Install
 

@@ -1,13 +1,17 @@
 package js
 
 import (
+	"encoding/json"
 	"errors"
+	"fmt"
 
 	"go.kuoruan.net/v8go-polyfills/console"
 	"rogchap.com/v8go"
 )
 
-type Context struct{ *v8go.Context }
+type Context struct {
+	*v8go.Context
+}
 
 func NewContext(opt ...v8go.ContextOption) (*Context, error) {
 	var isolate *Isolate
@@ -49,4 +53,11 @@ func (ctx *Context) MustEval(code string) *Value {
 		panic(err)
 	}
 	return val
+}
+func (ctx *Context) Error(message string) *Value {
+	m, err := json.Marshal(message)
+	if err != nil {
+		panic(err)
+	}
+	return ctx.MustEval(fmt.Sprintf("new Error(%s)", m))
 }

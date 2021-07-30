@@ -11,6 +11,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	result := ctx.MustEval("1 + 1")
-	fmt.Println(result)
+	code := "1 + 1"
+	result := ctx.MustEval(code)
+	fmt.Printf("%s = %s\n", code, result)
 }

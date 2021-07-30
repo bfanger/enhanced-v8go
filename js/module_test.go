@@ -9,16 +9,16 @@ import (
 
 func TestTransformCJS(t *testing.T) {
 	assert := assert.New(t)
-	code, err := Transform("module.exports = 123;", api.TransformOptions{})
+	code, err := forceCJS("module.exports=  123", api.TransformOptions{})
 	if assert.NoError(err) == false {
 		return
 	}
-	assert.Equal("(async function () { var exports = {}; var module = { exports };\nmodule.exports = 123;\n\nreturn module.exports; })()", code)
+	assert.Equal("module.exports = 123;\n", code) // processed by esbuild to force cjs
 	ctx, err := NewContext()
 	if assert.NoError(err) == false {
 		return
 	}
-	m, err := newModule(ctx, code, "module_test.go")
+	m, err := NewModule(ctx, code, "module_test.go")
 	if assert.NoError(err) == false {
 		return
 	}
@@ -28,18 +28,19 @@ func TestTransformCJS(t *testing.T) {
 	}
 	assert.Equal(int64(123), defaultExport.Integer())
 }
-
+func TestTransformKnownCJS(t *testing.T) {
+	code, err := forceCJS("module.exports=  123", api.TransformOptions{Sourcefile: "test.cjs"})
+	if assert.NoError(t, err) {
+		assert.Equal(t, "module.exports=  123", code) // not processed by esbuild
+	}
+}
 func TestTransformESM(t *testing.T) {
 	assert := assert.New(t)
-	code, err := Transform("export default 123", api.TransformOptions{})
-	if assert.NoError(err) == false {
-		return
-	}
 	ctx, err := NewContext()
 	if assert.NoError(err) == false {
 		return
 	}
-	m, err := newModule(ctx, code, "module_test.go")
+	m, err := NewModule(ctx, "export default 123", "module_test.go")
 	if assert.NoError(err) == false {
 		return
 	}
@@ -51,31 +52,12 @@ func TestTransformESM(t *testing.T) {
 }
 
 func TestTransformInvalidJavascript(t *testing.T) {
-	_, err := Transform("oops!?!", api.TransformOptions{})
+	_, err := forceCJS("oops!?!", api.TransformOptions{})
+	// allow esbuild to prevent executing "invalid" code
 	assert.Error(t, err)
 }
 
-func TestRequire(t *testing.T) {
-	assert := assert.New(t)
-	ctx, err := NewContext()
-	if assert.NoError(err) == false {
-		return
-	}
-	exports, err := Require(ctx, "/Volumes/Sites/v8go-node-polyfills/node/js/console.js")
-	if assert.NoError(err) == false {
-		return
-	}
-	defaultExport, err := exports.Default()
-	if assert.NoError(err) == false {
-		return
-	}
-	console, err := defaultExport.AsObject()
-	if assert.NoError(err) == false {
-		return
-	}
-	consoleLog, err := console.Get("log")
-	if assert.NoError(err) == false {
-		return
-	}
-	assert.True(consoleLog.IsFunction())
+func TestTransformTypescript(t *testing.T) {
+	_, err := forceCJS("const val: number = 123; export default n", api.TransformOptions{Sourcefile: "file.ts"})
+	assert.NoError(t, err)
 }

@@ -8,7 +8,7 @@ import (
 	"rogchap.com/v8go"
 )
 
-//go:embed scripts/*.js
+//go:embed scripts/*.cjs
 var js embed.FS
 
 type Polyfill struct {
@@ -16,35 +16,31 @@ type Polyfill struct {
 }
 
 func NewPolyfill(iso *v8go.Isolate) (*Polyfill, error) {
-
 	// @todo ...ConfigOptions
 	global, err := v8go.NewObjectTemplate(iso)
 	if err != nil {
 		return nil, err
 	}
 
-	println, err := v8go.NewFunctionTemplate(iso, func(info *v8go.FunctionCallbackInfo) *v8go.Value {
-		var args []string
-		for _, arg := range info.Args() {
-			args = append(args, fmt.Sprintf("%v", arg))
-		}
-		fmt.Printf("%v\n", strings.Join(args, " "))
-		return nil
-	})
+	bridge, err := v8go.NewObjectTemplate(iso)
 	if err != nil {
 		return nil, err
 	}
-	global.Set("println", println)
+	global.Set("go", bridge)
 
-	console, err := v8go.NewObjectTemplate(iso)
+	println, err := v8go.NewFunctionTemplate(iso, printfn)
 	if err != nil {
 		return nil, err
 	}
-	console.Set("log", println)
-	global.Set("console2", console)
-	global.Set("console", console)
+	bridge.Set("println", println)
 
-	err = lazyGlobalFunction(iso, global, "require", "scripts/require.js")
+	require, err := v8go.NewFunctionTemplate(iso, requireTemplate)
+	if err != nil {
+		return nil, err
+	}
+	bridge.Set("require", require)
+
+	err = lazyGlobalFunction(iso, global, "require", "scripts/require.cjs")
 	if err != nil {
 		return nil, err
 	}
@@ -57,7 +53,13 @@ func lazyGlobalFunction(iso *v8go.Isolate, global *v8go.ObjectTemplate, name str
 		if err != nil {
 			panic(err)
 		}
-		val, err := info.Context().RunScript(string(source), script)
+		ctx := info.Context()
+
+		m, err := NewModule(&Context{ctx}, string(source), script)
+		if err != nil {
+			panic(err)
+		}
+		val, err := m.Default()
 		if err != nil {
 			panic(err)
 		}
@@ -81,4 +83,13 @@ func lazyGlobalFunction(iso *v8go.Isolate, global *v8go.ObjectTemplate, name str
 	}
 	err = global.Set(name, template)
 	return err
+}
+
+func printfn(info *v8go.FunctionCallbackInfo) *v8go.Value {
+	var args []string
+	for _, arg := range info.Args() {
+		args = append(args, fmt.Sprintf("%v", arg))
+	}
+	fmt.Printf("%v\n", strings.Join(args, " "))
+	return nil
 }

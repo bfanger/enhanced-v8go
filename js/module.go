@@ -1,8 +1,9 @@
 package js
 
 import (
+	"encoding/json"
 	"fmt"
-	"os"
+	"path"
 	"strings"
 
 	"github.com/evanw/esbuild/pkg/api"
@@ -28,59 +29,22 @@ func (m *Module) Default() (*Value, error) {
 	return m.Value, nil // CommonJS
 }
 
-type registeryEntry struct {
-	m *Module
-}
-
-// @todo cleanup disposed contexts
-var registery = make(map[*Context]map[string]*registeryEntry)
-
-func Require(ctx *Context, filepath string) (*Module, error) {
-
-	entry := registery[ctx][filepath]
-	if entry != nil {
-		if entry.m == nil {
-			// @todo support for cyclic dependencies
-			return nil, errors.Errorf("cyclic dependency for %s", filepath)
-		}
-		return entry.m, nil
-	}
-	if registery[ctx] == nil {
-		registery[ctx] = make(map[string]*registeryEntry)
-	}
-	registery[ctx][filepath] = &registeryEntry{}
-	b, err := os.ReadFile(filepath)
+func NewModule(ctx *Context, code string, origin string) (*Module, error) {
+	// Wrap the commonjs code in an async iife exposing the exports as a promise
+	filename, err := json.Marshal(origin)
 	if err != nil {
 		return nil, err
 	}
-	code, err := Transform(string(b), api.TransformOptions{Sourcefile: filepath})
+	dirname, err := json.Marshal(path.Dir(origin))
 	if err != nil {
 		return nil, err
 	}
-	m, err := newModule(ctx, code, filepath)
+	code, err = forceCJS(code, api.TransformOptions{Sourcefile: origin})
 	if err != nil {
 		return nil, err
 	}
-	registery[ctx][filepath].m = m
-	return m, nil
-}
-
-func Transform(code string, options api.TransformOptions) (string, error) {
-	options.Format = api.FormatCommonJS
-	options.Target = api.ESNext
-	// @todo Don't use esbuild when options.Sourcefile is a *.cjs file?
-
-	result := api.Transform(code, options)
-	if len(result.Errors) != 0 {
-		formatted := api.FormatMessages(result.Errors, api.FormatMessagesOptions{TerminalWidth: 80, Kind: api.ErrorMessage, Color: true})
-		return "", errors.New(strings.Join(formatted, "\n\n"))
-	}
-	// Wrap code in an async iife to allow top-level await
-	return fmt.Sprintf("(async function () { var exports = {}; var module = { exports };\n%s\nreturn module.exports; })()", result.Code), nil
-}
-
-func newModule(ctx *Context, code, filename string) (*Module, error) {
-	m, err := ctx.RunScript(code, filename)
+	wrapped := fmt.Sprintf("(async function () { var exports = {}; var module = { exports }; const __filename = %s; const __dirname = %s; %s\nreturn module.exports; })()", filename, dirname, code)
+	m, err := ctx.RunScript(wrapped, origin)
 	if err != nil {
 		return nil, err
 	}
@@ -89,4 +53,31 @@ func newModule(ctx *Context, code, filename string) (*Module, error) {
 		return nil, err
 	}
 	return &Module{exports}, nil
+}
+func forceCJS(code string, options api.TransformOptions) (string, error) {
+	if strings.HasSuffix(options.Sourcefile, ".cjs") {
+		// Already commonjs? skip esbuild
+		return code, nil
+	}
+	if strings.HasSuffix(options.Sourcefile, ".ts") {
+		options.Loader = api.LoaderTS
+	}
+	if strings.HasSuffix(options.Sourcefile, ".tsx") {
+		options.Loader = api.LoaderTSX
+	}
+	if strings.HasSuffix(options.Sourcefile, ".json") {
+		options.Loader = api.LoaderJSON
+	}
+	options.Format = api.FormatCommonJS
+	options.Target = api.ESNext
+	options.Engines = []api.Engine{
+		{Name: api.EngineChrome, Version: "92"}, // @todo auto update to latest?
+	}
+	result := api.Transform(code, options)
+	if len(result.Errors) != 0 {
+		formatted := api.FormatMessages(result.Errors, api.FormatMessagesOptions{TerminalWidth: 80, Kind: api.ErrorMessage, Color: true})
+		return "", errors.New(strings.Join(formatted, "\n\n"))
+	}
+	// Wrap code in an async iife to allow top-level await
+	return string(result.Code), nil
 }

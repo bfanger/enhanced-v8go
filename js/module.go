@@ -43,7 +43,21 @@ func NewModule(ctx *Context, code string, origin string) (*Module, error) {
 	if err != nil {
 		return nil, err
 	}
-	wrapped := fmt.Sprintf("(async function () { var exports = {}; var module = { exports }; const __filename = %s; const __dirname = %s; %s\nreturn module.exports; })()", filename, dirname, code)
+	augmented := fmt.Sprintf(`
+const __filename = %s;
+const __dirname = %s;
+var module =  {
+	 exports: {}, 
+	 id: __filename,
+	 filename: __filename,
+	 path: __dirname,
+	 loaded: false,
+};
+var exports = module.exports;
+require.main = module;
+`, filename, dirname)
+	oneliner := strings.Join(strings.Split(augmented, "\n"), " ")
+	wrapped := fmt.Sprintf("(async function () { %s %s\nmodule.loaded = true; return module.exports; })()", oneliner, code)
 	m, err := ctx.RunScript(wrapped, origin)
 	if err != nil {
 		return nil, err

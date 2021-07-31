@@ -8,7 +8,7 @@ Build on top of https://github.com/rogchap/v8go and improves the developer exper
 - shorter "js" package alias
 - Typescript support (via esbuild)
 - console.log (wip)
-- require() (wip)
+- require()
 
 ## Install
 

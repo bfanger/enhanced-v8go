@@ -61,3 +61,24 @@ func (ctx *Context) Error(message string) *Value {
 	}
 	return ctx.MustEval(fmt.Sprintf("new Error(%s)", m))
 }
+
+func (ctx *Context) dataErrorTuple(data *v8go.Value, err error) *Value {
+	var tuple *Value
+	if err != nil {
+		message, err := json.Marshal(err.Error())
+		if err != nil {
+			panic(err)
+		}
+		tuple = ctx.MustEval(fmt.Sprintf("([ null, new Error(%s) ])", message))
+	} else {
+		tuple = ctx.MustEval("([ null, null ])")
+	}
+	if data != nil {
+		val, err := tuple.AsObject()
+		if err != nil {
+			panic(nil)
+		}
+		val.SetIdx(0, data)
+	}
+	return tuple
+}

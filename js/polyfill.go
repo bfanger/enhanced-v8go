@@ -34,11 +34,16 @@ func NewPolyfill(iso *v8go.Isolate) (*Polyfill, error) {
 	}
 	bridge.Set("println", println)
 
-	require, err := v8go.NewFunctionTemplate(iso, requireTemplate)
+	require, err := v8go.NewFunctionTemplate(iso, requireFileTemplate)
 	if err != nil {
 		return nil, err
 	}
-	bridge.Set("require", require)
+	bridge.Set("requireFile", require)
+	resolve, err := v8go.NewFunctionTemplate(iso, requireResolveTemplate)
+	if err != nil {
+		return nil, err
+	}
+	bridge.Set("requireResolve", resolve)
 
 	err = lazyGlobalFunction(iso, global, "require", "scripts/require.cjs")
 	if err != nil {
